@@ -1,7 +1,19 @@
 import {Logger} from "./util.mjs"
-import {AUTH, DAYS_OF_WEEK, DISCORD_INIT_LINK, ID_MAP, MODULE_ID, ORONDER_BASE_URL, TIMEZONES} from "./constants.mjs"
+import {
+    AUTH, 
+    COMBAT_ENABLED,
+    COMBAT_HEALTH_ESTIMATE,
+    COMBAT_HEALTH_ESTIMATE_TYPE,
+    DAYS_OF_WEEK,
+    DISCORD_INIT_LINK,
+    ID_MAP,
+    MODULE_ID,
+    ORONDER_BASE_URL,
+    TIMEZONES
+} from "./constants.mjs"
 import {full_sync, sync_actor} from "./sync.mjs"
 import {open_socket_with_oronder} from "./module.mjs"
+import { set_combat_hooks } from "./combat.mjs"
 
 export class OronderSettingsFormApplication extends FormApplication {
     constructor(object = {}, options = {}) {
@@ -181,6 +193,9 @@ export class OronderSettingsFormApplication extends FormApplication {
 
         this.bind()
 
+        await game.settings.set(MODULE_ID, COMBAT_ENABLED, this.object.guild.combat_tracking_enabled)
+        await game.settings.set(MODULE_ID, COMBAT_HEALTH_ESTIMATE, this.object.combat_health_estimate)
+
         const updated_id_map = await game.settings.set(MODULE_ID, ID_MAP,
             Object.fromEntries(this.object.players.map(p => [p.foundry_id, p.discord_id]))
         )
@@ -228,6 +243,8 @@ export class OronderSettingsFormApplication extends FormApplication {
             .catch(Logger.error)
 
         await Promise.all(actors_to_sync.map(sync_actor)).catch(Logger.error)
+
+        set_combat_hooks()
     }
 
     async _full_sync(clear_cache = false) {
